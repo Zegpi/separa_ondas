@@ -1,0 +1,4 @@
+Seleccionamos las redes red3.dat y red5.dat 
+Para la capa 0 las redes tenían 7 y 14 neuronas y la nueva red tendrá 12 neuronas 
+Para la capa 1 las redes tenían 6 y 13 neuronas y la nueva red tendrá 11 neuronas 
+Para la capa 2 las redes tenían 5 y 12 neuronas y la nueva red tendrá 9 neuronas 

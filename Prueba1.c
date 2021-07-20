@@ -144,7 +144,7 @@ int main (int argc, char *argv[]) {
 
 			if(rank==2)
 			{
-				sleep(25);
+				sleep(0.1);
 			}
 			else
 			{
