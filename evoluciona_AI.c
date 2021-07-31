@@ -3,15 +3,46 @@
 #include <dirent.h>
 #include <math.h>
 #include <time.h>
+#include <limits.h>
 
+int MinInt(int a[],int num)
+{
+	int min_a=INT_MAX;
+
+	for(int i=0;i<num;i++)
+	{
+		if(a[i]<min_a)
+		{
+			min_a=a[i];
+		}
+	}
+
+	return min_a;
+}
+
+int MaxInt(int a[],int num)
+{
+	int max_a=INT_MIN;
+
+	for(int i=0;i<num;i++)
+	{
+		if(a[i]>max_a)
+		{
+			max_a=a[i];
+		}
+	}
+
+	return max_a;
+}
 
 /*Este código evoluciona una nueva red neuronal a partir de 2 redes existentes (en desarrollo)*/
 int main(void)
 {
 
 //Variables
-	int cont,num_redes_entrada,a,b,c,N1,N2,*n1,*n2,neuronas_capa_inicial,neuronas_capa_anterior,c1,c2,c_nuevo;
-	float ***w1,***w2,***r1,***r2,***red_larga;
+	int cont,num_redes_entrada,a,b,c,N1,N2,*n1,*n2,nodos_capa_inicial,nodos_capa_anterior1,nodos_capa_anterior2,nodos_capa_anterior_nueva,c1,c2,,d1,d2,c_nuevo,delta_capa,limites[3],
+		lim_c1,lim_c2,lim_d1,lim_d2;
+	float ***w1,***w2,***w_nueva,***r1,***r2,***red_larga;
 	DIR *carpeta;
 	FILE *fid_red1,*fid_red2;
 	size_t num_leidos;
@@ -93,7 +124,7 @@ int main(void)
 	fid_red1=fopen(nombre_red_1,"r");
 	fid_red2=fopen(nombre_red_2,"r");
 
-	//Leemos el número de capas y el número de neuronas por capa de ambas redes
+	//Leemos el número de capas y el número de nodos por capa de ambas redes
 	num_leidos=fread(&N1,sizeof(int),1,fid_red1);
 	num_leidos=fread(&N2,sizeof(int),1,fid_red2);
 	
@@ -110,9 +141,9 @@ int main(void)
 	}
 
 	//Creamos arreglos para guardar los pesos
-	neuronas_capa_inicial=20001;			//Num inputs, siempre debe ser 20001 a menos que se esté haciendo debug
+	nodos_capa_inicial=20001;			//Num inputs, siempre debe ser 20001 a menos que se esté haciendo debug
 	
-	neuronas_capa_anterior=neuronas_capa_inicial;
+	nodos_capa_anterior1=nodos_capa_inicial;
 	w1=calloc(N1,sizeof(float **));
 	for(int i=0;i<N1;i++)
 	{
@@ -120,12 +151,12 @@ int main(void)
 
 		for(int j=0;j<n1[i];j++)
 		{
-			w1[i][j]=calloc(neuronas_capa_anterior+1,sizeof(float));
+			w1[i][j]=calloc(nodos_capa_anterior1+1,sizeof(float));
 		}
-		neuronas_capa_anterior=n1[i];
+		nodos_capa_anterior1=n1[i];
 	}
 
-	neuronas_capa_anterior=neuronas_capa_inicial;
+	nodos_capa_anterior1=nodos_capa_inicial;
 	w2=calloc(N2,sizeof(float **));
 	for(int i=0;i<N2;i++)
 	{
@@ -133,36 +164,36 @@ int main(void)
 
 		for(int j=0;j<n2[i];j++)
 		{
-			w2[i][j]=calloc(neuronas_capa_anterior+1,sizeof(float));
+			w2[i][j]=calloc(nodos_capa_anterior1+1,sizeof(float));
 		}
-		neuronas_capa_anterior=n2[i];
+		nodos_capa_anterior1=n2[i];
 	}
 
 	//Ahora leemos los archivos y los ponemos en w1 y w2
-	neuronas_capa_anterior=neuronas_capa_inicial;
+	nodos_capa_anterior1=nodos_capa_inicial;
 	for(int i=0;i<N1;i++)
 	{
 		for(int j=0;j<n1[i];j++)
 		{
-			for(int k=0;k<neuronas_capa_anterior+1;k++)
+			for(int k=0;k<nodos_capa_anterior1+1;k++)
 			{
 				num_leidos=fread(&w1[i][j][k],sizeof(float),1,fid_red1);
 			}
 		}
-		neuronas_capa_anterior=n1[i];
+		nodos_capa_anterior1=n1[i];
 	}
 
-	neuronas_capa_anterior=neuronas_capa_inicial;
+	nodos_capa_anterior1=nodos_capa_inicial;
 	for(int i=0;i<N2;i++)
 	{
 		for(int j=0;j<n2[i];j++)
 		{
-			for(int k=0;k<neuronas_capa_anterior+1;k++)
+			for(int k=0;k<nodos_capa_anterior1+1;k++)
 			{
 				num_leidos=fread(&w2[i][j][k],sizeof(float),1,fid_red2);
 			}
 		}
-		neuronas_capa_anterior=n2[i];
+		nodos_capa_anterior1=n2[i];
 	}
 
 	fclose(fid_red1);
@@ -172,6 +203,9 @@ int main(void)
 
 //Combinamos ambas redes
 	
+	//Creamos arreglo para guardar la nueva red
+	w_nueva=calloc(N1,sizeof(float **));
+
 	//Partimos del supuesto que N1==N2, si eso no se cumple, la cosa no anda.
 	if(N1!=N2)
 	{
@@ -180,33 +214,93 @@ int main(void)
 	}
 	else
 	{
-		neuronas_capa_anterior=neuronas_capa_inicial;					//La capa inicial siempre tiene el mismo largo
-		for(int i=0;i<N1;i++)		//Ciclo sobre las capas
+		//Sabemos cuantos nodos tiene la capa anterior, porque el número de nodos de entrada es constante
+		nodos_capa_anterior1=nodos_capa_inicial;
+		nodos_capa_anterior2=nodos_capa_inicial+1000;
+		nodos_capa_anterior_nueva=nodos_capa_inicial+500;
+		
+		for(int i=0;i<N1;i++)		//Hacemos un ciclo sobre las capas
 		{
-			//Determinamos que red tiene menos neuronas
+			//Determinamos que red tiene menos nodos en la capa actual
 			if(n1[i]>n2[i])
 			{
-				r1=w2;				//R1 es la red con menor número de neuronas.
-				r2=w1;
-				c1=n2[i];			//Número de neuronas en la red con menos neuronas.
-				c2=n1[i];			//Número de neuronas en la red con más neuronas.
+				r1=w2;						//r1 es la red con menor número de nodos.
+				r2=w1;						//r2 es la red con más nodos
+				c1=n2[i];					//Número de nodos en la red con menos nodos.
+				c2=n1[i];					//Número de nodos en la red con más nodos.
+				d1=nodos_capa_anterior2;
+				d2=nodos_capa_anterior1;
 			}
 			else
 			{
-				r1=w1;
+				r1=w1;				//idem a sección anterior
 				r2=w2;
 				c1=n1[i];
 				c2=n2[i];
+				d1=nodos_capa_anterior1;
+				d2=nodos_capa_anterior2;
 			}
-			c2=c1+7;
-			c_nuevo=c1+ (int) ((c2-c1)*( (double) rand()/RAND_MAX ));
+			
+			//Elegimos cuantos nodos tendrá la nueva red en la capa actual
+			c2=c2+6;		//BORRAR ESTO!!!
+			c_nuevo=c1 + (int) ((c2-c1+1)*( (double) rand()/RAND_MAX ));						//Probé esto con 30000 corridas y genera valores homogeneamente distribuidos entre c1 y c2, técnicamente
+																							//podría generar el valor c2+1 si rand() es exactamente igual a RAND_MAX, pero la posibilidad es ínfima. 
 
-			printf("Para la capa %d las redes tenían %d y %d neuronas y la nueva red tendrá %d neuronas \n",i,c1,c2,c_nuevo);
+			//Aleatoriamente podemos añadir o quitar un nodo 
+			if( ((double)rand()/RAND_MAX)>=0.97 )
+			{
+				delta_capa=1;
+			}
+			else if( ((double)rand()/RAND_MAX)<=0.02 )
+			{
+				delta_capa=-1;
+			}
+			else
+			{
+				delta_capa=0;																//Generé 300000 de estos y aproximadamente el 2% son 1 y el 2% son -1, así que está ok.
+			}
+			c_nuevo=c_nuevo+delta_capa;
+			//printf("Para la capa %d las redes tenían %d y %d nodos y la nueva red tendrá %d nodos \n",i,c1,c2,c_nuevo);
 
+			//Ya sabemos cuantos nodos tiene la capa actual, creamos el arreglo para contenerla
+			w_nueva[i]=calloc(c_nuevo,sizeof(float *));
+			for(int j=0;j<c_nuevo;j++)
+			{
+				w_nueva[i][j]=calloc(nodos_capa_anterior_nueva+1,sizeof(float));
+			}
+			
+			//Determinamos los límites de los ciclos
+			//Límites para las filas
+			limites[0]=c1;	limites[1]=c_nuevo;
+			lim_c1=MinInt(limites,2);
 
+			limites[0]=c2;	limites[1]=c_nuevo;
+			lim_c2=MinInt(limites,2);
+
+			//Límites para las columnas
+			limites[0]=nodos_capa_anterior1;	limites[1]=nodos_capa_anterior2;	limites[2]=nodos_capa_anterior_nueva;
+			lim_d1=MinInt(limites,3);
+
+			limites[0]=nodos_capa_anterior1;	limites[1]=nodos_capa_anterior2;	limites[2]=MaxInt(limites,2);
+			limites[0]=nodos_capa_anterior_nueva;	limites[1]=limites[2];
+			lim_d2=MinInt(limites,2);
+
+			
+			
+			printf("c1=%d, c2=%d, c_nuevo=%d, d1=%d, d2=%d, d_nuevo=%d \n",c1,c2,c_nuevo,nodos_capa_anterior1,nodos_capa_anterior2,nodos_capa_anterior_nueva);
+			printf("Los limites para la capa %d son lim_c1=%d, lim_c2=%d, lim_d1=%d, lim_d2=%d \n",i,lim_c1,lim_c2,lim_d1,lim_d2);
+
+			for(int k1=0;k1<lim_c1;k1++)
+			{
+				
+			}
+
+			//Los nodos de la capa actual se convierten en los nodos de la capa anterior
+			nodos_capa_anterior1=n1[i];
+			nodos_capa_anterior2=n2[i];
+			nodos_capa_anterior_nueva=c_nuevo;
+				
 		}
-
-		
 	}
 	
 

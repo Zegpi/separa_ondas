@@ -1,4 +1,7 @@
-Seleccionamos las redes red3.dat y red5.dat 
-Para la capa 0 las redes tenían 7 y 14 neuronas y la nueva red tendrá 12 neuronas 
-Para la capa 1 las redes tenían 6 y 13 neuronas y la nueva red tendrá 11 neuronas 
-Para la capa 2 las redes tenían 5 y 12 neuronas y la nueva red tendrá 9 neuronas 
+Seleccionamos las redes red2.dat y red6.dat 
+c1=7, c2=13, c_nuevo=13, d1=20001, d2=21001, d_nuevo=20501 
+Los limites para la capa 0 son lim_c1=7, lim_c2=13, lim_d1=20001, lim_d2=20501 
+c1=6, c2=12, c_nuevo=9, d1=7, d2=13, d_nuevo=13 
+Los limites para la capa 1 son lim_c1=6, lim_c2=9, lim_d1=7, lim_d2=13 
+c1=5, c2=11, c_nuevo=8, d1=6, d2=12, d_nuevo=9 
+Los limites para la capa 2 son lim_c1=5, lim_c2=8, lim_d1=6, lim_d2=9 
